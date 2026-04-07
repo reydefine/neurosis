@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SBS Tiermaker – Neurosis</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #1a1a2e; color: #e8e8e0; font-family: Arial, sans-serif; min-height: 100vh; }
+
+    /* ── HEADER ── */
+    #header {
+      background: #16213e;
+      border-bottom: 2px solid #0f3460;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    #header h1 { font-size: 20px; font-weight: 900; letter-spacing: 2px; color: #fff; text-transform: uppercase; font-family: 'Arial Black', sans-serif; }
+    #header h1 span { color: #e94560; }
+    .band-tag { font-size: 11px; background: #e94560; color: #fff; padding: 3px 10px; border-radius: 20px; font-weight: 700; letter-spacing: 1px; }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: calc(100vh - 54px);
+      gap: 16px; padding: 20px;
+    }
+    #login-screen h2 { font-size: 18px; color: #8ab4d4; font-weight: 400; letter-spacing: 1px; }
+    .login-row { display: flex; gap: 8px; }
+    #login-input {
+      background: #0f3460; border: 1px solid #1a4a8a; color: #fff;
+      padding: 10px 16px; font-size: 15px; border-radius: 4px;
+      outline: none; width: 220px;
+    }
+    #login-input:focus { border-color: #e94560; }
+    #login-existing { margin-top: 20px; text-align: center; max-width: 440px; }
+    .voter-pill {
+      display: inline-block; background: #0f3460; border: 1px solid #1a4a8a;
+      color: #8ab4d4; padding: 4px 12px; font-size: 12px; border-radius: 20px;
+      cursor: pointer; margin: 3px; transition: all .15s;
+    }
+    .voter-pill:hover { border-color: #e94560; color: #fff; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      background: #e94560; color: #fff; border: none;
+      padding: 7px 14px; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; cursor: pointer; border-radius: 4px;
+      white-space: nowrap; letter-spacing: .5px; transition: background .15s;
+    }
+    .btn:hover { background: #ff5a75; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn.sec { background: #0f3460; border: 1px solid #1a4a8a; color: #8ab4d4; font-weight: 400; }
+    .btn.sec:hover { background: #1a4a8a; color: #fff; }
+    .btn.grn { background: #1a6a1a; }
+    .btn.grn:hover { background: #228822; }
+    .btn.blu { background: #2a5a8a; }
+    .btn.blu:hover { background: #3a6a9a; }
+
+    /* ── MAIN APP ── */
+    #main-screen { display: none; }
+    #voter-bar {
+      background: #16213e; border-bottom: 1px solid #0f3460;
+      padding: 7px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    #voter-bar > span { font-size: 12px; color: #5a7aa0; }
+    .voter-badge { font-size: 12px; font-weight: 700; color: #fff; background: #e94560; padding: 3px 10px; border-radius: 20px; }
+
+    #main { display: flex; min-height: calc(100vh - 160px); }
+    #tiers-panel { flex: 1; padding: 10px; min-width: 0; }
+
+    .tier-row { display: flex; align-items: stretch; margin-bottom: 3px; min-height: 82px; border: 1px solid #0f3460; }
+    .tier-label { width: 56px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 900; font-family: 'Arial Black', sans-serif; flex-shrink: 0; user-select: none; }
+    .tier-S .tier-label { background: #ff7f7f; color: #1a0000; }
+    .tier-A .tier-label { background: #ffbf7f; color: #1a0800; }
+    .tier-B .tier-label { background: #ffdf7f; color: #1a1000; }
+    .tier-C .tier-label { background: #ffff7f; color: #1a1a00; }
+    .tier-D .tier-label { background: #bfff7f; color: #0a1a00; }
+    .tier-F .tier-label { background: #7fbfff; color: #001020; }
+
+    .tier-content { flex: 1; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 3px; padding: 5px; min-height: 82px; transition: background .15s; }
+    .tier-S .tier-content { background: rgba(255,127,127,.07); }
+    .tier-A .tier-content { background: rgba(255,191,127,.06); }
+    .tier-B .tier-content { background: rgba(255,223,127,.05); }
+    .tier-C .tier-content { background: rgba(255,255,127,.05); }
+    .tier-D .tier-content { background: rgba(191,255,127,.05); }
+    .tier-F .tier-content { background: rgba(127,191,255,.05); }
+    .tier-content.drag-over { background: #2a3a5a !important; outline: 2px dashed #e94560; }
+
+    /* ── ALBUMS ── */
+    .album {
+      width: 72px; height: 72px; cursor: grab; position: relative;
+      flex-shrink: 0; border: 2px solid rgba(255,255,255,.08);
+      transition: transform .12s, border-color .12s; border-radius: 2px;
+      overflow: visible; background: #0f3460;
+    }
+    .album:hover { transform: scale(1.1); border-color: #e94560; z-index: 20; }
+    .album.dragging { opacity: .3; transform: scale(.88); }
+    .album-inner { width: 100%; height: 100%; overflow: hidden; border-radius: 1px; }
+    .album img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .album-fb { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; text-align: center; }
+    .album-fb .yr { font-size: 14px; font-weight: 900; color: #e94560; }
+    .album-fb .nm { font-size: 8px; color: #5a7aa0; line-height: 1.3; margin-top: 2px; }
+    .tip {
+      position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%);
+      background: #0d1b35; color: #e8e8e0; font-size: 10px; padding: 4px 7px;
+      white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .15s;
+      z-index: 100; border: 1px solid #1a4a8a; border-radius: 3px;
+      max-width: 170px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .album:hover .tip { opacity: 1; }
+
+    /* ── POOL ── */
+    #pool-panel { width: 200px; background: #16213e; border-left: 2px solid #0f3460; padding: 10px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    #pool-panel h2 { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #5a7aa0; }
+    #pool-grid { display: flex; flex-wrap: wrap; gap: 3px; padding: 5px; background: #1e2a45; border: 1px solid #0f3460; flex: 1; align-content: flex-start; border-radius: 3px; min-height: 80px; }
+    #pool-grid.drag-over { background: #1e3a2a; outline: 2px dashed #7ec850; }
+
+    /* ── STATUS BAR ── */
+    #status-bar {
+      background: #0f1628; border-top: 1px solid #0f3460;
+      padding: 8px 16px; font-size: 11px; color: #5a7aa0;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; flex-wrap: wrap; position: sticky; bottom: 0;
+    }
+
+    .placeholder { font-size: 11px; color: #2a4a6a; text-align: center; padding: 16px 8px; line-height: 1.7; width: 100%; }
+
+    /* ── MODAL ── */
+    #modal-wrap {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.8); z-index: 300;
+      align-items: center; justify-content: center;
+    }
+    #modal-wrap.open { display: flex; }
+    #modal {
+      background: #16213e; border: 1px solid #0f3460;
+      border-radius: 6px; padding: 22px 24px;
+      width: 420px; max-width: 95vw; max-height: 85vh; overflow-y: auto;
+    }
+    #modal h3 { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    #modal-sub { font-size: 11px; color: #5a7aa0; margin-bottom: 16px; }
+    .tier-line { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+    .t-badge { width: 30px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; border-radius: 2px; flex-shrink: 0; font-family: 'Arial Black', sans-serif; }
+    .t-names { font-size: 11px; color: #cce0f5; line-height: 1.6; padding-top: 3px; }
+    .modal-btns { margin-top: 18px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .section-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #5a7aa0; margin: 14px 0 6px; font-weight: 700; border-top: 1px solid #0f3460; padding-top: 10px; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 60px; right: 20px;
+      padding: 9px 18px; border-radius: 4px; font-size: 12px;
+      font-weight: 700; z-index: 400; opacity: 0;
+      transition: opacity .3s; pointer-events: none;
+    }
+    #toast.ok { background: #1a6a1a; color: #fff; }
+    #toast.err { background: #7a1a1a; color: #fff; }
+    #toast.show { opacity: 1; }
+
+    @media (max-width: 600px) {
+      #pool-panel { width: 130px; }
+      .album { width: 58px; height: 58px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <h1>SBS <span>TIER</span>MAKER</h1>
+  <span class="band-tag">NEUROSIS</span>
+</div>
+
+<!-- PANTALLA LOGIN -->
+<div id="login-screen">
+  <h2>¿Cómo te llamas?</h2>
+  <div class="login-row">
+    <input type="text" id="login-input" placeholder="Tu nombre..." maxlength="30"
+      onkeydown="if(event.key==='Enter')startSession()" autofocus />
+    <button class="btn" onclick="startSession()">Entrar</button>
+  </div>
+  <div id="login-existing">
+    <div style="font-size:12px;color:#5a7aa0">Cargando votantes anteriores…</div>
+  </div>
+</div>
+
+<!-- PANTALLA PRINCIPAL -->
+<div id="main-screen">
+  <div id="voter-bar">
+    <span>Votando como:</span>
+    <span class="voter-badge" id="voter-badge"></span>
+    <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn grn" id="btn-save" onclick="saveVote()">💾 Guardar voto</button>
+      <button class="btn sec" onclick="resetTiers()">Reset</button>
+      <button class="btn blu" onclick="openMedia()">⌀ Ver Media</button>
+      <button class="btn sec" onclick="changeUser()">Cambiar usuario</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="tiers-panel"><div id="tiers"></div></div>
+    <div id="pool-panel">
+      <h2>Sin clasificar</h2>
+      <div id="pool-grid"
+        ondragover="onDragOver(event,'pool')"
+        ondragleave="onDragLeave(event,'pool')"
+        ondrop="onDrop(event,'pool')">
+        <div class="placeholder">Cargando portadas…</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="status-bar">
+    <span id="status-txt">Arrastra portadas a los tiers</span>
+  </div>
+</div>
+
+<!-- MODAL MEDIA -->
+<div id="modal-wrap" onclick="if(event.target===this)closeModal()">
+  <div id="modal">
+    <h3 id="modal-title"></h3>
+    <div id="modal-sub"></div>
+    <div id="modal-body"></div>
+    <div class="modal-btns">
+      <button class="btn grn" onclick="copyModal()">📋 Copiar texto</button>
+      <button class="btn sec" onclick="closeModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── DATOS ─────────────────────────────────────────────────────────────────────
+
+const TIERS = ['S','A','B','C','D','F'];
+const TC = {S:'#ff7f7f',A:'#ffbf7f',B:'#ffdf7f',C:'#ffff7f',D:'#bfff7f',F:'#7fbfff'};
+const TT = {S:'#1a0000',A:'#1a0800',B:'#1a1000',C:'#1a1a00',D:'#0a1a00',F:'#001020'};
+
+const ALBUMS = [
+  { id:'pain_of_mind',    title:'Pain of Mind',                        year:1987, itunes:1286226442 },
+  { id:'word_as_law',     title:'The Word as Law',                     year:1990, itunes:null },
+  { id:'souls_at_zero',   title:'Souls at Zero',                       year:1992, itunes:1285931703 },
+  { id:'enemy_of_sun',    title:'Enemy of the Sun',                    year:1993, itunes:257611254 },
+  { id:'through_silver',  title:'Through Silver in Blood',             year:1996, itunes:null },
+  { id:'times_of_grace',  title:'Times of Grace',                      year:1999, itunes:73637822 },
+  { id:'sun_never_sets',  title:'A Sun That Never Sets',               year:2001, itunes:null },
+  { id:'eye_every_storm', title:'The Eye of Every Storm',              year:2004, itunes:259502631 },
+  { id:'given_rising',    title:'Given to the Rising',                 year:2007, itunes:252614879 },
+  { id:'honor_found',     title:'Honor Found in Decay',                year:2012, itunes:null },
+  { id:'fires_within',    title:'Fires Within Fires',                  year:2016, itunes:1285549898 },
+  { id:'undying_love',    title:'An Undying Love for a Burning World', year:2026, itunes:1882105289 },
+];
+
+const EMPTY_VOTE = () => ({
+  tiers: {S:[],A:[],B:[],C:[],D:[],F:[]},
+  pool: ALBUMS.map(a => a.id),
+});
+
+// ── ESTADO ────────────────────────────────────────────────────────────────────
+
+let currentUser = null;
+let myVote      = null;
+let allVotes    = {};
+let covers      = {};
+let isDirty     = false;
+
+// ── API ───────────────────────────────────────────────────────────────────────
+
+const API = '/votes';   // → /functions/votes.js en Cloudflare Pages
+
+async function apiFetchAll() {
+  try {
+    const r = await fetch(API);
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch(e) {
+    console.error('apiFetchAll:', e);
+    return {};
+  }
+}
+
+async function apiSave(name, vote) {
+  const r = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, vote }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || r.status);
+  return data;
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+
+async function init() {
+  allVotes = await apiFetchAll();
+  renderLoginPills();
+}
+
+function renderLoginPills() {
+  const names = Object.values(allVotes).map(v => v.name || '').filter(Boolean);
+  const el = document.getElementById('login-existing');
+  if (!names.length) {
+    el.innerHTML = '<div style="font-size:12px;color:#2a4a6a;margin-top:8px">Sé el primero en votar 🎸</div>';
+    return;
+  }
+  el.innerHTML =
+    '<div style="font-size:11px;color:#5a7aa0;margin:12px 0 8px;letter-spacing:1px;text-transform:uppercase">Votantes anteriores</div>' +
+    names.map(n =>
+      `<span class="voter-pill" onclick="quickLogin(${JSON.stringify(n)})">${esc(n)}</span>`
+    ).join('');
+}
+
+function quickLogin(name) {
+  document.getElementById('login-input').value = name;
+  startSession();
+}
+
+async function startSession() {
+  const name = document.getElementById('login-input').value.trim();
+  if (!name) return;
+  currentUser = name;
+
+  // Buscar voto previo (case-insensitive)
+  const match = Object.values(allVotes).find(
+    v => (v.name || '').toLowerCase() === name.toLowerCase()
+  );
+  myVote  = match
+    ? { tiers: match.tiers || {S:[],A:[],B:[],C:[],D:[],F:[]}, pool: match.pool || ALBUMS.map(a=>a.id) }
+    : EMPTY_VOTE();
+  isDirty = false;
+
+  document.getElementById('voter-badge').textContent = name;
+  document.getElementById('login-screen').style.display  = 'none';
+  document.getElementById('main-screen').style.display   = 'block';
+
+  renderTiers();
+  renderAlbums();
+  updateStatus();
+  loadCovers();
+}
+
+function changeUser() {
+  currentUser = null; myVote = null; isDirty = false;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-screen').style.display  = 'none';
+  document.getElementById('login-input').value = '';
+  init();
+}
+
+// ── PORTADAS ──────────────────────────────────────────────────────────────────
+
+async function loadCovers() {
+  const ids = ALBUMS.filter(a => a.itunes).map(a => a.itunes).join(',');
+  try {
+    const r    = await fetch(`https://itunes.apple.com/lookup?id=${ids}&entity=album`);
+    const data = await r.json();
+    for (const rec of (data.results || [])) {
+      if (!rec.artworkUrl100 || !rec.collectionId) continue;
+      const album = ALBUMS.find(a => a.itunes === rec.collectionId);
+      if (album) covers[album.id] = rec.artworkUrl100.replace('100x100bb','400x400bb');
+    }
+  } catch(_) {}
+
+  for (const album of ALBUMS.filter(a => !covers[a.id])) {
+    try {
+      const q    = encodeURIComponent('Neurosis ' + album.title);
+      const r    = await fetch(`https://itunes.apple.com/search?term=${q}&entity=album&limit=5&attribute=artistTerm`);
+      const data = await r.json();
+      for (const rec of (data.results || [])) {
+        const yr = rec.releaseDate ? parseInt(rec.releaseDate.slice(0,4)) : 0;
+        if (Math.abs(yr - album.year) <= 2 && rec.artworkUrl100) {
+          covers[album.id] = rec.artworkUrl100.replace('100x100bb','400x400bb');
+          break;
+        }
+      }
+    } catch(_) {}
+  }
+  renderAlbums();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const getAlbum = id => ALBUMS.find(a => a.id === id);
+
+function renderTiers() {
+  const el = document.getElementById('tiers');
+  el.innerHTML = '';
+  TIERS.forEach(t => {
+    const row = document.createElement('div');
+    row.className = `tier-row tier-${t}`;
+    row.innerHTML = `<div class="tier-label">${t}</div>
+      <div class="tier-content" id="tier-${t}"
+        ondragover="onDragOver(event,'${t}')"
+        ondragleave="onDragLeave(event,'${t}')"
+        ondrop="onDrop(event,'${t}')"></div>`;
+    el.appendChild(row);
+  });
+}
+
+function makeAlbumEl(albumId) {
+  const album = getAlbum(albumId);
+  if (!album) return null;
+  const div   = document.createElement('div');
+  div.className  = 'album';
+  div.draggable  = true;
+  div.dataset.id = albumId;
+  div.ondragstart = e => { e.dataTransfer.setData('albumId', albumId); div.classList.add('dragging'); };
+  div.ondragend   = () => div.classList.remove('dragging');
+
+  const inner = document.createElement('div');
+  inner.className = 'album-inner';
+
+  if (covers[albumId]) {
+    const img = document.createElement('img');
+    img.src = covers[albumId];
+    img.alt = album.title;
+    img.onerror = () => {
+      inner.innerHTML = `<div class="album-fb"><div class="yr">${album.year}</div><div class="nm">${esc(album.title.split(' ').slice(0,2).join(' '))}</div></div>`;
+    };
+    inner.appendChild(img);
+  } else {
+    inner.innerHTML = `<div class="album-fb"><div class="yr">${album.year}</div><div class="nm">${esc(album.title.split(' ').slice(0,2).join(' '))}</div></div>`;
+  }
+
+  div.appendChild(inner);
+  div.innerHTML += `<div class="tip">${esc(album.title)} (${album.year})</div>`;
+  return div;
+}
+
+function renderAlbums() {
+  if (!myVote) return;
+  TIERS.forEach(t => { const el = document.getElementById('tier-'+t); if (el) el.innerHTML = ''; });
+  const pool = document.getElementById('pool-grid');
+  pool.innerHTML = '';
+
+  TIERS.forEach(t => {
+    const el = document.getElementById('tier-'+t);
+    (myVote.tiers[t] || []).forEach(id => { const e = makeAlbumEl(id); if (e) el.appendChild(e); });
+  });
+  (myVote.pool || []).forEach(id => { const e = makeAlbumEl(id); if (e) pool.appendChild(e); });
+  if (!myVote.pool.length) pool.innerHTML = '<div class="placeholder">¡Todos clasificados! ✓</div>';
+}
+
+// ── DRAG & DROP ───────────────────────────────────────────────────────────────
+
+function onDragOver(e, zone) {
+  e.preventDefault();
+  const el = zone === 'pool' ? document.getElementById('pool-grid') : document.getElementById('tier-'+zone);
+  if (el) el.classList.add('drag-over');
+}
+function onDragLeave(e, zone) {
+  const el = zone === 'pool' ? document.getElementById('pool-grid') : document.getElementById('tier-'+zone);
+  if (el) el.classList.remove('drag-over');
+}
+function onDrop(e, zone) {
+  e.preventDefault();
+  const el = zone === 'pool' ? document.getElementById('pool-grid') : document.getElementById('tier-'+zone);
+  if (el) el.classList.remove('drag-over');
+  const albumId = e.dataTransfer.getData('albumId');
+  if (!albumId || !myVote) return;
+
+  TIERS.forEach(t => { myVote.tiers[t] = (myVote.tiers[t] || []).filter(id => id !== albumId); });
+  myVote.pool = (myVote.pool || []).filter(id => id !== albumId);
+  if (zone === 'pool') myVote.pool.push(albumId);
+  else myVote.tiers[zone].push(albumId);
+
+  isDirty = true;
+  renderAlbums();
+  updateStatus();
+}
+
+// ── ACCIONES ──────────────────────────────────────────────────────────────────
+
+function updateStatus() {
+  if (!myVote) return;
+  const ranked = ALBUMS.length - (myVote.pool || []).length;
+  const mark   = isDirty ? ' · ⚠ Sin guardar' : ' · ✅ Guardado';
+  document.getElementById('status-txt').textContent = `${ranked}/${ALBUMS.length} álbumes clasificados${mark}`;
+  document.getElementById('btn-save').textContent   = isDirty ? '💾 Guardar voto' : '💾 Actualizar voto';
+}
+
+async function saveVote() {
+  if (!currentUser || !myVote) return;
+  const btn = document.getElementById('btn-save');
+  btn.disabled    = true;
+  btn.textContent = 'Guardando…';
+  try {
+    await apiSave(currentUser, myVote);
+    // Actualizar caché local
+    const key = currentUser.trim().toLowerCase().replace(/[^a-z0-9_\-]/g,'_');
+    allVotes[key] = { name: currentUser, ...myVote };
+    isDirty = false;
+    updateStatus();
+    showToast('✅ Voto guardado', 'ok');
+  } catch(err) {
+    showToast('❌ Error al guardar: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false;
+    updateStatus();
+  }
+}
+
+function resetTiers() {
+  if (!confirm('¿Reiniciar tu clasificación? Los cambios no guardados se perderán.')) return;
+  myVote  = EMPTY_VOTE();
+  isDirty = true;
+  renderAlbums();
+  updateStatus();
+}
+
+// ── MEDIA ─────────────────────────────────────────────────────────────────────
+
+function calcAvgScore(albumId) {
+  const s = {S:6,A:5,B:4,C:3,D:2,F:1};
+  let total = 0, count = 0;
+  Object.values(allVotes).forEach(vd => {
+    for (const [t, ids] of Object.entries(vd.tiers || {})) {
+      if ((ids || []).includes(albumId)) { total += s[t]; count++; }
+    }
+  });
+  if (!count) return null;
+  const avg = total / count;
+  for (const [t, sc] of Object.entries(s).sort((a,b) => b[1]-a[1])) {
+    if (avg >= sc - 0.5) return t;
+  }
+  return 'F';
+}
+
+async function openMedia() {
+  allVotes = await apiFetchAll();   // frescos del servidor
+
+  const voters = Object.values(allVotes).map(v => v.name || '').filter(Boolean);
+  document.getElementById('modal-title').textContent =
+    voters.length ? `Media · ${voters.length} voto${voters.length !== 1 ? 's' : ''}` : 'Sin votos guardados aún';
+  document.getElementById('modal-sub').textContent =
+    voters.length ? `Votantes: ${voters.join(', ')}` : 'Nadie ha guardado su voto todavía.';
+
+  let html = '';
+
+  if (voters.length) {
+    TIERS.forEach(t => {
+      const ids = ALBUMS.filter(a => calcAvgScore(a.id) === t);
+      if (ids.length) {
+        const names = ids.map(a => `${a.title} (${a.year})`).join(', ');
+        html += `<div class="tier-line">
+          <div class="t-badge" style="background:${TC[t]};color:${TT[t]}">${t}</div>
+          <div class="t-names">${esc(names)}</div>
+        </div>`;
+      }
+    });
+
+    const unranked = ALBUMS.filter(a => !calcAvgScore(a.id));
+    if (unranked.length) {
+      html += `<div class="section-label">Sin clasificar por nadie</div>`;
+      unranked.forEach(a => {
+        html += `<div class="tier-line">
+          <div class="t-badge" style="background:#1e2a45;color:#5a7aa0;font-size:9px">—</div>
+          <div class="t-names" style="color:#5a7aa0">${esc(a.title)} (${a.year})</div>
+        </div>`;
+      });
+    }
+
+    html += `<div class="section-label">Votos individuales</div>`;
+    Object.values(allVotes).forEach(vd => {
+      html += `<div style="font-size:12px;color:#e94560;font-weight:700;margin:8px 0 4px">${esc(vd.name || '?')}</div>`;
+      TIERS.forEach(t => {
+        const ids = (vd.tiers || {})[t] || [];
+        if (ids.length) {
+          const names = ids.map(id => getAlbum(id)?.title).filter(Boolean).join(', ');
+          html += `<div class="tier-line">
+            <div class="t-badge" style="background:${TC[t]};color:${TT[t]};font-size:11px">${t}</div>
+            <div class="t-names">${esc(names)}</div>
+          </div>`;
+        }
+      });
+      const unvoted = (vd.pool || []).map(id => getAlbum(id)?.title).filter(Boolean);
+      if (unvoted.length) {
+        html += `<div class="tier-line">
+          <div class="t-badge" style="background:#1e2a45;color:#5a7aa0;font-size:9px">—</div>
+          <div class="t-names" style="color:#5a7aa0">${esc(unvoted.join(', '))}</div>
+        </div>`;
+      }
+    });
+  }
+
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-wrap').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal-wrap').classList.remove('open'); }
+
+function copyModal() {
+  const lines = [
+    document.getElementById('modal-title').textContent,
+    document.getElementById('modal-sub').textContent,
+    '',
+  ];
+  document.querySelectorAll('#modal-body .tier-line').forEach(line => {
+    const b = line.querySelector('.t-badge')?.textContent?.trim();
+    const n = line.querySelector('.t-names')?.textContent?.trim();
+    if (b && n) lines.push(`[${b}] ${n}`);
+  });
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const btn = event.target;
+    btn.textContent = '✅ Copiado';
+    setTimeout(() => btn.textContent = '📋 Copiar texto', 2000);
+  });
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+
+function showToast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = `${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
