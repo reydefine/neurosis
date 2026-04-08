@@ -341,6 +341,7 @@ async function startSession() {
   renderAlbums();
   updateStatus();
   loadCovers();
+  initTouchDrag();
 }
 
 function changeUser() {
@@ -446,6 +447,18 @@ function renderAlbums() {
   if (!myVote.pool.length) pool.innerHTML = '<div class="placeholder">¡Todos clasificados! ✓</div>';
 }
 
+function moveAlbum(albumId, zone) {
+  TIERS.forEach(t => { myVote.tiers[t] = (myVote.tiers[t] || []).filter(id => id !== albumId); });
+  myVote.pool = (myVote.pool || []).filter(id => id !== albumId);
+  if (zone === 'pool') myVote.pool.push(albumId);
+  else myVote.tiers[zone].push(albumId);
+  isDirty = true;
+  renderAlbums();
+  updateStatus();
+}
+
+
+  
 // ── DRAG & DROP ───────────────────────────────────────────────────────────────
 
 function onDragOver(e, zone) {
@@ -463,17 +476,128 @@ function onDrop(e, zone) {
   if (el) el.classList.remove('drag-over');
   const albumId = e.dataTransfer.getData('albumId');
   if (!albumId || !myVote) return;
-
-  TIERS.forEach(t => { myVote.tiers[t] = (myVote.tiers[t] || []).filter(id => id !== albumId); });
-  myVote.pool = (myVote.pool || []).filter(id => id !== albumId);
-  if (zone === 'pool') myVote.pool.push(albumId);
-  else myVote.tiers[zone].push(albumId);
-
-  isDirty = true;
-  renderAlbums();
-  updateStatus();
+  moveAlbum(albumId, zone);
 }
 
+
+
+
+  
+// ── TOUCH DRAG ────────────────────────────────────────────────────────────────
+
+let touchDragging = null;   // { albumId, ghost }
+let lastDropZone  = null;
+
+function initTouchDrag() {
+  document.addEventListener('touchstart', onTouchStart, { passive: false });
+  document.addEventListener('touchmove',  onTouchMove,  { passive: false });
+  document.addEventListener('touchend',   onTouchEnd,   { passive: false });
+}
+
+function onTouchStart(e) {
+  const album = e.target.closest('.album');
+  if (!album || !myVote) return;
+
+  const albumId = album.dataset.id;
+  const rect    = album.getBoundingClientRect();
+  const touch   = e.touches[0];
+
+  // Clonar la portada como "fantasma" visual
+  const ghost = album.cloneNode(true);
+  ghost.style.cssText = `
+    position: fixed;
+    width: ${rect.width}px;
+    height: ${rect.height}px;
+    top: ${rect.top}px;
+    left: ${rect.left}px;
+    opacity: 0.75;
+    pointer-events: none;
+    z-index: 9999;
+    border: 2px solid #e94560;
+    border-radius: 2px;
+    transition: none;
+  `;
+  document.body.appendChild(ghost);
+  album.classList.add('dragging');
+
+  touchDragging = {
+    albumId,
+    ghost,
+    originEl: album,
+    offsetX: touch.clientX - rect.left,
+    offsetY: touch.clientY - rect.top,
+  };
+  e.preventDefault();
+}
+
+function onTouchMove(e) {
+  if (!touchDragging) return;
+  e.preventDefault();
+
+  const touch = e.touches[0];
+  const { ghost, offsetX, offsetY } = touchDragging;
+
+  ghost.style.left = (touch.clientX - offsetX) + 'px';
+  ghost.style.top  = (touch.clientY - offsetY) + 'px';
+
+  // Detectar sobre qué zona estamos
+  ghost.style.display = 'none';
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  ghost.style.display = '';
+
+  const zone = getZoneFromElement(el);
+
+  if (zone !== lastDropZone) {
+    if (lastDropZone) clearDragOver(lastDropZone);
+    if (zone) highlightDragOver(zone);
+    lastDropZone = zone;
+  }
+}
+
+function onTouchEnd(e) {
+  if (!touchDragging) return;
+
+  const { albumId, ghost, originEl } = touchDragging;
+
+  ghost.remove();
+  originEl.classList.remove('dragging');
+
+  if (lastDropZone) {
+    clearDragOver(lastDropZone);
+    moveAlbum(albumId, lastDropZone);
+  }
+
+  touchDragging = null;
+  lastDropZone  = null;
+}
+
+function getZoneFromElement(el) {
+  if (!el) return null;
+  // ¿Estamos dentro de un tier?
+  const tierContent = el.closest('.tier-content');
+  if (tierContent) {
+    const id = tierContent.id; // "tier-S", "tier-A", etc.
+    return id ? id.replace('tier-', '') : null;
+  }
+  // ¿Estamos en el pool?
+  if (el.closest('#pool-grid')) return 'pool';
+  return null;
+}
+
+function highlightDragOver(zone) {
+  const el = zone === 'pool' ? document.getElementById('pool-grid') : document.getElementById('tier-'+zone);
+  if (el) el.classList.add('drag-over');
+}
+
+function clearDragOver(zone) {
+  const el = zone === 'pool' ? document.getElementById('pool-grid') : document.getElementById('tier-'+zone);
+  if (el) el.classList.remove('drag-over');
+}
+    
+
+
+
+  
 // ── ACCIONES ──────────────────────────────────────────────────────────────────
 
 function updateStatus() {
